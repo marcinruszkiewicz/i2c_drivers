@@ -59,12 +59,8 @@ module I2CDrivers
       MODE_FORCED = 0b01
       MODE_NORMAL = 0b11
 
-      def initialize(args = {})
-        args = {
-          address: ADDRESS
-        }.merge(args)
-
-        super args
+      def initialize(address:)
+        super address: address
 
         read_calibration
       end
@@ -86,34 +82,34 @@ module I2CDrivers
         @dig_P7,
         @dig_P8,
         @dig_P9 = i2c_get(0x88, 24).unpack([
-          "S<", # T1
-          "s<", # T2
-          "s<", # T3
-          "S<", # P1
-          "s<", # P2
-          "s<", # P3
-          "s<", # P4
-          "s<", # P5
-          "s<", # P6
-          "s<", # P7
-          "s<", # P8
-          "s<" # P9
+          'S<', # T1
+          's<', # T2
+          's<', # T3
+          'S<', # P1
+          's<', # P2
+          's<', # P3
+          's<', # P4
+          's<', # P5
+          's<', # P6
+          's<', # P7
+          's<', # P8
+          's<' # P9
         ].join)
 
-        @dig_H1, = *i2c_get(0xA1, 1).unpack("C")
+        @dig_H1, = *i2c_get(0xA1, 1).unpack('C')
         @dig_H2,
         @dig_H3,
         e4,
         e5,
         e6,
         @dig_H6 = *i2c_get(0xE1, 8).unpack([
-          "s<", # H2
-          "C", # H3
-          "C", # H4 (0xE4)
-          "C", # H4/H5 (0xE5)
-          "C", # H5 (0xE6)
-          "c" # H6
-        ].join(""))
+          's<', # H2
+          'C', # H3
+          'C', # H4 (0xE4)
+          'C', # H4/H5 (0xE5)
+          'C', # H5 (0xE6)
+          'c' # H6
+        ].join)
         @dig_H4 = e4 << 4 | e5 & 0x0F
         @dig_H5 = e6 << 4 | e5 >> 4
         nil
@@ -122,6 +118,7 @@ module I2CDrivers
       def calc_sensor_data
         raw = read_raw
         temp, t_fine = compensate_T(raw[:temp_raw])
+
         {
           temp: temp,
           pressure: compensate_P(raw[:pressure_raw], t_fine),
@@ -133,7 +130,8 @@ module I2CDrivers
         data = i2c_get(0xF7, 8)
         pressure_raw = (data[0].ord << 12) | (data[1].ord << 4) | (data[2].ord >> 2)
         temp_raw = (data[3].ord << 12) | (data[4].ord << 4) | (data[5].ord >> 2)
-        hum_raw = (data[6].ord << 8) | (data[7].ord)
+        hum_raw = (data[6].ord << 8) | data[7].ord
+
         {
           pressure_raw: pressure_raw,
           temp_raw: temp_raw,
@@ -174,43 +172,41 @@ module I2CDrivers
       end
 
       def compensate_T(adc_T)
-        var1 = ((((adc_T>>3)-(@dig_T1<<1))) * (@dig_T2)) >> 11
-        var2 = (((((adc_T>>4) -  (@dig_T1)) * ((adc_T>>4)- (@dig_T1))) >> 12) * (@dig_T3)) >> 14
+        var1 = ((((adc_T >> 3) - (@dig_T1 << 1))) * @dig_T2) >> 11
+        var2 = (((((adc_T >> 4) - @dig_T1) * ((adc_T >> 4) - @dig_T1)) >> 12) * @dig_T3) >> 14
         t_fine = var1 + var2
-        temp = (t_fine*5+128)>>8
+        temp = (t_fine * 5 + 128) >> 8
         [temp / 100.to_f, t_fine]
       end
 
       def compensate_P(adc_P, t_fine)
-        var1 = (t_fine) - 128000
+        var1 = t_fine - 128_000
         var2 = var1 * var1 * @dig_P6
-        var2 = var2 + ((var1*@dig_P5)<<17)
-        var2 = var2 + ((@dig_P4)<<35)
-        var1 = ((var1 * var1 * @dig_P3)>>8) + ((var1 * @dig_P2)<<12)
-        var1 = ((((1)<<47)+var1))*(@dig_P1)>>33
-        if var1.zero?
-          return 0
-        end
+        var2 += ((var1 * @dig_P5) << 17)
+        var2 += (@dig_P4 << 35)
+        var1 = ((var1 * var1 * @dig_P3) >> 8) + ((var1 * @dig_P2) << 12)
+        var1 = (((1 << 47) + var1)) * @dig_P1 >> 33
+        return 0 if var1.zero?
 
-        p = 1048576-adc_P
-        p = (((p<<31)-var2)*3125)/var1
+        p = 1_048_576 - adc_P
+        p = (((p << 31) - var2) * 3_125) / var1
 
-        var1 = ((@dig_P9) * (p>>13) * (p>>13)) >> 25
-        var2 = ((@dig_P8) * p) >> 19
-        q24_8 = ((p + var1 + var2) >> 8) + ((@dig_P7)<<4)
+        var1 = (@dig_P9 * (p >> 13) * (p >> 13)) >> 25
+        var2 = (@dig_P8 * p) >> 19
+        q24_8 = ((p + var1 + var2) >> 8) + (@dig_P7 << 4)
         # convert Q24.8 to hPa
         q24_8 / 256.to_f / 100
       end
 
       def compensate_H(adc_H, t_fine)
-        v_x1_u32r = (t_fine - (76800))
-        v_x1_u32r = (((((adc_H << 14) - ((@dig_H4) << 20)- ((@dig_H5) * v_x1_u32r)) +
-          (16384)) >> 15) * (((((((v_x1_u32r * (@dig_H6)) >> 10) * (((v_x1_u32r * (@dig_H3)) >> 11) + (32768))) >> 10) + (2097152)) * (@dig_H2) + 8192) >> 14));
-        v_x1_u32r = (v_x1_u32r- (((((v_x1_u32r >> 15) * (v_x1_u32r >> 15)) >> 7) * (@dig_H1)) >> 4));
-        v_x1_u32r = (v_x1_u32r < 0 ? 0 : v_x1_u32r);
-        v_x1_u32r = (v_x1_u32r > 419430400 ? 419430400 : v_x1_u32r);
+        v_x1_u32r = t_fine - 76_800
 
-        q22_10 = (v_x1_u32r>>12)
+        v_x1_u32r = (((((adc_H << 14) - (@dig_H4 << 20) - (@dig_H5 * v_x1_u32r)) + 16_384) >> 15) * (((((((v_x1_u32r * @dig_H6) >> 10) * (((v_x1_u32r * (@dig_H3)) >> 11) + 32_768)) >> 10) + 2_097_152) * @dig_H2 + 8192) >> 14))
+        v_x1_u32r = (v_x1_u32r - (((((v_x1_u32r >> 15) * (v_x1_u32r >> 15)) >> 7) * @dig_H1) >> 4))
+        v_x1_u32r = v_x1_u32r.negative? ? 0 : v_x1_u32r
+        v_x1_u32r = v_x1_u32r > 419_430_400 ? 419_430_400 : v_x1_u32r
+
+        q22_10 = v_x1_u32r >> 12
         # Q22.10 to %RH
         q22_10 / 1024.to_f
       end
