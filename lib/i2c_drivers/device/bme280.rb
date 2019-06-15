@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'device'
+require 'i2c_drivers/device/device'
 
 module I2CDrivers
   module Device
