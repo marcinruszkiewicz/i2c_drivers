@@ -6,7 +6,7 @@ require 'i2c_drivers/version'
 
 Gem::Specification.new do |spec|
   spec.name          = 'i2c_drivers'
-  spec.version       = I2cDrivers::VERSION
+  spec.version       = I2CDrivers::VERSION
   spec.authors       = ['Marcin Ruszkiewicz']
   spec.email         = ['marcin.ruszkiewicz@polcode.net']
 
