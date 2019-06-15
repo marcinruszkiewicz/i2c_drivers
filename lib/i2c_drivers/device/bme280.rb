@@ -7,8 +7,6 @@ module I2CDrivers
     # Implements the I2C-Device BMP280/BME280
     # Datasheet: https://ae-bst.resource.bosch.com/media/_tech/media/datasheets/BST-BME280_DS002-13.pdf
     class Bme280 < Device
-      ADDRESS = 0x76
-
       REG_HUM_LSB = 0xFE
       REG_HUM_MSB = 0xFD
       REG_TEMP_XLSB = 0xFC
