@@ -1,11 +1,7 @@
 # frozen_string_literal: true
 
-RSpec.describe I2cDrivers do
+RSpec.describe I2CDrivers do
   it 'has a version number' do
-    expect(I2cDrivers::VERSION).not_to be nil
-  end
-
-  it 'does something useful' do
-    expect(false).to eq(true)
+    expect(I2CDrivers::VERSION).not_to be nil
   end
 end

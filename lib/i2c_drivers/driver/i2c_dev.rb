@@ -2,12 +2,13 @@
 
 module I2CDrivers
   module Driver
+    # I2C-dev interface driver
     class I2CDev < Driver
       I2C_SLAVE = 0x0703
       I2C_SLAVE_FORCE = 0x0706
 
-      def initialize
-        @path = Dir.glob('/dev/i2c-*').max
+      def initialize(path: '/dev/i2c-1')
+        @path = path
         @slave_command = I2C_SLAVE
       end
 

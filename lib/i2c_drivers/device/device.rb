@@ -2,6 +2,7 @@
 
 module I2CDrivers
   module Device
+    # Base device class
     class Device
       def initialize(address:)
         @driver = I2CDrivers::Driver::I2CDev.new

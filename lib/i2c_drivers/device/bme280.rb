@@ -4,7 +4,7 @@ require 'i2c_drivers/device/device'
 
 module I2CDrivers
   module Device
-    # Implements the I2C-Device BMP280/BME280
+    # Implements the I2C-Device BMP280/BME280 - a Bosch temperature/humidity/pressure sensor
     # Datasheet: https://ae-bst.resource.bosch.com/media/_tech/media/datasheets/BST-BME280_DS002-13.pdf
     class Bme280 < Device
       REG_HUM_LSB = 0xFE
